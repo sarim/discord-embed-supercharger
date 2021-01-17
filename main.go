@@ -26,6 +26,8 @@ var Session, _ = discordgo.New()
 // command line arguments.
 func init() {
 
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+
 	// Discord Authentication Token
 	Session.Token = os.Getenv("DG_TOKEN")
 	if Session.Token == "" {

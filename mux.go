@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/jaytaylor/html2text"
+	"gopkg.in/xmlpath.v2"
 )
 
 // Context holds a bit of extra data we pass along to route handlers
@@ -78,24 +78,33 @@ func (m *Mux) OnMessageCreate(ds *discordgo.Session, mc *discordgo.MessageCreate
 	fbLinkRe := regexp.MustCompile(`(:?https:\/\/.*)?facebook\.com\/[^ ]+`)
 
 	if postLink := fbLinkRe.FindString(mc.Content); postLink != "" {
-		fmt.Println(mc.Content, c.ID, mc.Message.ID)
+		log.Println(mc.Content, c.ID, mc.Message.ID)
 		err := ds.ChannelMessageDelete(c.ID, mc.Message.ID)
 		if err != nil {
-			fmt.Println(err.Error())
+			log.Println(err.Error())
 		}
 		msg, err := parseFacebookPost(postLink)
 		if err != nil {
-			fmt.Println(err.Error())
+			log.Println(err.Error())
 		}
+		msg = fbLinkRe.ReplaceAllString(mc.Content, msg)
 		_, err = ds.ChannelMessageSend(c.ID, msg)
 		if err != nil {
-			fmt.Println(err.Error())
+			log.Println(err.Error())
+			fmt.Println(msg)
 		}
 	}
 }
 
 func parseFacebookPost(postLink string) (string, error) {
-	resp, err := http.Get("https://www.facebook.com/plugins/post.php?href=" + postLink + "&width=500&show_text=true&appId=508863169151565&height=497")
+	path := xmlpath.MustCompile("//div[@id='m_story_permalink_view']")
+
+	req, err := http.NewRequest("GET", postLink, nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Linux; Android 6.0.1; Moto G (4)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.87 Mobile Safari/537.36 Edg/88.0.705.45")
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return "", err
 	}
@@ -104,10 +113,14 @@ func parseFacebookPost(postLink string) (string, error) {
 	if resp.StatusCode != 200 {
 		return resp.Status, errors.New(resp.Status)
 	}
-	text, err := html2text.FromReader(resp.Body, html2text.Options{OmitLinks: true})
+	node, err := xmlpath.ParseHTML(resp.Body)
 	if err != nil {
 		return "", err
 	}
 
-	return text, nil
+	for iter := path.Iter(node); iter.Next(); {
+		return iter.Node().String(), nil
+	}
+
+	return "", nil
 }
