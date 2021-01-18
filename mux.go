@@ -80,6 +80,11 @@ func (m *Mux) OnMessageCreate(ds *discordgo.Session, mc *discordgo.MessageCreate
 	if postLink := fbLinkRe.FindStringSubmatch(mc.Content); postLink != nil {
 		log.Println(mc.Content, c.ID, mc.Message.ID)
 
+		AuthorName := mc.Member.Nick
+		if AuthorName == "" {
+			AuthorName = mc.Author.Username
+		}
+
 		msg, err := parseFacebookPost(postLink[1])
 		if err != nil {
 			log.Println(err.Error())
