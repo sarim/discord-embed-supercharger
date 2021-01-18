@@ -75,52 +75,58 @@ func (m *Mux) OnMessageCreate(ds *discordgo.Session, mc *discordgo.MessageCreate
 		}
 	}
 
-	fbLinkRe := regexp.MustCompile(`(:?https:\/\/.*)?facebook\.com\/[^ ]+`)
+	fbLinkRe := regexp.MustCompile(`(https:\/\/.*\.facebook\.com\/[^ ?]+)[?]?[^ ]*`)
 
-	if postLink := fbLinkRe.FindString(mc.Content); postLink != "" {
+	if postLink := fbLinkRe.FindStringSubmatch(mc.Content); postLink != nil {
 		log.Println(mc.Content, c.ID, mc.Message.ID)
-		err := ds.ChannelMessageDelete(c.ID, mc.Message.ID)
+
+		msg, err := parseFacebookPost(postLink[1])
 		if err != nil {
 			log.Println(err.Error())
 		}
-		msg, err := parseFacebookPost(postLink)
-		if err != nil {
-			log.Println(err.Error())
+		if len(msg) > 200 {
+			msg = msg[0:200]
 		}
-		msg = fbLinkRe.ReplaceAllString(mc.Content, msg)
-		_, err = ds.ChannelMessageSend(c.ID, msg)
+		msgRaw := string(msg)
+		msgRaw = "**" + mc.Author.Username + "** Says: \n" + fbLinkRe.ReplaceAllString(mc.Content, "<"+postLink[1]+"> \n> "+msgRaw+"\n")
+		_, err = ds.ChannelMessageSend(c.ID, msgRaw)
 		if err != nil {
 			log.Println(err.Error())
 			fmt.Println(msg)
 		}
+
+		err = ds.ChannelMessageDelete(c.ID, mc.Message.ID)
+		if err != nil {
+			log.Println(err.Error())
+		}
 	}
 }
 
-func parseFacebookPost(postLink string) (string, error) {
+func parseFacebookPost(postLink string) ([]rune, error) {
 	path := xmlpath.MustCompile("//div[@id='m_story_permalink_view']")
 
 	req, err := http.NewRequest("GET", postLink, nil)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Linux; Android 6.0.1; Moto G (4)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.87 Mobile Safari/537.36 Edg/88.0.705.45")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		return resp.Status, errors.New(resp.Status)
+		return []rune(resp.Status), errors.New(resp.Status)
 	}
 	node, err := xmlpath.ParseHTML(resp.Body)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	for iter := path.Iter(node); iter.Next(); {
-		return iter.Node().String(), nil
+		return []rune(iter.Node().String()), nil
 	}
 
-	return "", nil
+	return nil, nil
 }
