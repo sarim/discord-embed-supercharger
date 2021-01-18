@@ -80,6 +80,7 @@ func (m *Mux) OnMessageCreate(ds *discordgo.Session, mc *discordgo.MessageCreate
 	if postLink := fbLinkRe.FindStringSubmatch(mc.Content); postLink != nil {
 		log.Println(mc.Content, c.ID, mc.Message.ID)
 
+		quoteChar := ">"
 		AuthorName := mc.Member.Nick
 		if AuthorName == "" {
 			AuthorName = mc.Author.Username
@@ -89,11 +90,14 @@ func (m *Mux) OnMessageCreate(ds *discordgo.Session, mc *discordgo.MessageCreate
 		if err != nil {
 			log.Println(err.Error())
 		}
+		if len(msg) == 0 {
+			quoteChar = ""
+		}
 		if len(msg) > 200 {
 			msg = msg[0:200]
 		}
 		msgRaw := string(msg)
-		msgRaw = "**" + mc.Author.Username + "** Says: \n" + fbLinkRe.ReplaceAllString(mc.Content, "<"+postLink[1]+"> \n> "+msgRaw+"\n")
+		msgRaw = "**" + AuthorName + "** Says: \n" + fbLinkRe.ReplaceAllString(mc.Content, "<"+postLink[1]+"> \n"+quoteChar+" "+msgRaw+"\n")
 		_, err = ds.ChannelMessageSend(c.ID, msgRaw)
 		if err != nil {
 			log.Println(err.Error())
