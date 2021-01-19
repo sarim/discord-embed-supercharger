@@ -1,4 +1,5 @@
+.env
 *.exe
-discord-embed-supercharger
-.vscode/settings.json
 __debug_bin
+.vscode/settings.json
+discord-embed-supercharger
