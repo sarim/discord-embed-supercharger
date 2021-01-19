@@ -27,6 +27,17 @@ type Context struct {
 	HasMentionFirst bool
 }
 
+// Patterns List patterns to match in various facebook pages
+var Patterns = []*xmlpath.Path{
+	xmlpath.MustCompile("//div[@id='m_story_permalink_view']"),
+	xmlpath.MustCompile("//div[@id='MPhotoContent']"),
+}
+
+// SoupNode is a wrapper around xmlpath.Node to apply our own Stringifier
+type SoupNode struct {
+	Node *xmlpath.Node
+}
+
 // HandlerFunc is the function signature required for a message route handler.
 type HandlerFunc func(*discordgo.Session, *discordgo.Message, *Context)
 
@@ -112,8 +123,6 @@ func (m *Mux) OnMessageCreate(ds *discordgo.Session, mc *discordgo.MessageCreate
 }
 
 func parseFacebookPost(postLink string) ([]rune, error) {
-	path := xmlpath.MustCompile("//div[@id='m_story_permalink_view']")
-
 	req, err := http.NewRequest("GET", postLink, nil)
 	if err != nil {
 		return nil, err
@@ -128,14 +137,32 @@ func parseFacebookPost(postLink string) ([]rune, error) {
 	if resp.StatusCode != 200 {
 		return []rune(resp.Status), errors.New(resp.Status)
 	}
+
 	node, err := xmlpath.ParseHTML(resp.Body)
 	if err != nil {
 		return nil, err
 	}
 
-	for iter := path.Iter(node); iter.Next(); {
-		return []rune(iter.Node().String()), nil
+	for _, pattern := range Patterns {
+		for iter := pattern.Iter(node); iter.Next(); {
+			sNode := SoupNode{iter.Node()}
+			return sNode.runeString(), nil
+		}
 	}
 
 	return nil, nil
+}
+
+func (n *SoupNode) runeString() []rune {
+	text := n.Node.String()
+
+	if text != "" {
+		return []rune(text)
+	}
+
+	div := xmlpath.MustCompile("div")
+	for iter := div.Iter(n.Node); iter.Next(); {
+		text = text + " " + iter.Node().String()
+	}
+	return []rune(text)
 }
