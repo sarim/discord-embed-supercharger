@@ -6,6 +6,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"regexp"
@@ -99,7 +100,7 @@ func (m *Mux) OnMessageCreate(ds *discordgo.Session, mc *discordgo.MessageCreate
 			AuthorName = mc.Author.Username
 		}
 
-		msg, err := parseFacebookPost(postLink[1])
+		msg, pic, err := parseFacebookPost(postLink[1])
 		if err != nil {
 			log.Println(err.Error())
 		}
@@ -111,7 +112,21 @@ func (m *Mux) OnMessageCreate(ds *discordgo.Session, mc *discordgo.MessageCreate
 		}
 		msgRaw := string(msg)
 		msgRaw = "**" + AuthorName + "** Says: \n" + fbLinkRe.ReplaceAllString(mc.Content, "<"+postLink[1]+"> \n"+quoteChar+" "+msgRaw+"\n")
-		_, err = ds.ChannelMessageSend(c.ID, msgRaw)
+
+		var file *discordgo.File = nil
+		if pic != nil {
+			file = &discordgo.File{
+				Name:        "gg.jpeg",
+				ContentType: "image/jpeg",
+				Reader:      pic,
+			}
+		}
+		messageObject := &discordgo.MessageSend{
+			Content: msgRaw,
+			File:    file,
+		}
+
+		_, err = ds.ChannelMessageSendComplex(c.ID, messageObject)
 		if err != nil {
 			log.Println(err.Error())
 			fmt.Println(msg)
@@ -124,33 +139,37 @@ func (m *Mux) OnMessageCreate(ds *discordgo.Session, mc *discordgo.MessageCreate
 	}
 }
 
-func parseFacebookPost(postLink string) ([]rune, error) {
+func parseFacebookPost(postLink string) ([]rune, io.Reader, error) {
 	req, err := http.NewRequest("GET", postLink, nil)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	req.Header.Set("User-Agent", "Mozilla/5.0 (iPad; CPU OS 11_0 like Mac OS X) AppleWebKit/604.1.34 (KHTML, like Gecko) Version/11.0 Mobile/15A5341f Safari/604.1 Edg/88.0.4324.96")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		return []rune(resp.Status), errors.New(resp.Status)
+		return []rune(resp.Status), nil, errors.New(resp.Status)
 	}
 
 	node, err := xmlpath.ParseHTML(resp.Body)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	for _, pattern := range Patterns {
 		for iter := pattern.Iter(node); iter.Next(); {
 			sNode := SoupNode{iter.Node()}
-			return sNode.runeString(), nil
+			img := extractImage(sNode.Node)
+			return sNode.runeString(), img, nil
 		}
 	}
+
+	return nil, nil, nil
+}
 
 func extractImage(node *xmlpath.Node) io.Reader {
 	i := 0
