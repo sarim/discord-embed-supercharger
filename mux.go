@@ -33,6 +33,8 @@ var Patterns = []*xmlpath.Path{
 	xmlpath.MustCompile("//div[@id='MPhotoContent']"),
 }
 
+var ImagePattern = xmlpath.MustCompile("//img/@src")
+
 // SoupNode is a wrapper around xmlpath.Node to apply our own Stringifier
 type SoupNode struct {
 	Node *xmlpath.Node
@@ -150,7 +152,21 @@ func parseFacebookPost(postLink string) ([]rune, error) {
 		}
 	}
 
-	return nil, nil
+func extractImage(node *xmlpath.Node) io.Reader {
+	i := 0
+	for iter := ImagePattern.Iter(node); iter.Next(); {
+		if i > 0 {
+			picUrl := iter.Node().String()
+			log.Println(picUrl)
+			resp, err := http.Get(picUrl)
+			if err != nil {
+				continue
+			}
+			return resp.Body
+		}
+		i++
+	}
+	return nil
 }
 
 func (n *SoupNode) runeString() []rune {
