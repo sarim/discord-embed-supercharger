@@ -127,7 +127,7 @@ func parseFacebookPost(postLink string) ([]rune, error) {
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Linux; Android 6.0.1; Moto G (4)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.87 Mobile Safari/537.36 Edg/88.0.705.45")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (iPad; CPU OS 11_0 like Mac OS X) AppleWebKit/604.1.34 (KHTML, like Gecko) Version/11.0 Mobile/15A5341f Safari/604.1 Edg/88.0.4324.96")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
