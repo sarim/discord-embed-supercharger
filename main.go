@@ -35,6 +35,7 @@ func init() {
 	}
 	Router := &Mux{}
 	Session.AddHandler(Router.OnMessageCreate)
+	Session.AddHandler(Router.OnReady)
 }
 
 func main() {

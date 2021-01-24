@@ -36,6 +36,8 @@ var Patterns = []*xmlpath.Path{
 
 var ImagePattern = xmlpath.MustCompile("//img/@src")
 
+var versionNotifyCID = "705809578872406117"
+
 // SoupNode is a wrapper around xmlpath.Node to apply our own Stringifier
 type SoupNode struct {
 	Node *xmlpath.Node
@@ -46,6 +48,17 @@ type HandlerFunc func(*discordgo.Session, *discordgo.Message, *Context)
 
 // Mux is the main struct for all mux methods.
 type Mux struct {
+}
+
+// OnReady is a DiscordGo Event Handler function.  This must be
+// registered using the DiscordGo.Session.AddHandler function.  This function
+// will fire when bot is ready.
+func (m *Mux) OnReady(ds *discordgo.Session, r *discordgo.Ready) {
+	msg := "Bot " + Version + " is ready"
+	_, err := ds.ChannelMessageSend(versionNotifyCID, msg)
+	if err != nil {
+		log.Println(err.Error())
+	}
 }
 
 // OnMessageCreate is a DiscordGo Event Handler function.  This must be
