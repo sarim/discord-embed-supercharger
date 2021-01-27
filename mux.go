@@ -34,7 +34,9 @@ var Patterns = []*xmlpath.Path{
 	xmlpath.MustCompile("//div[@id='MPhotoContent']"),
 }
 
-var ImagePattern = xmlpath.MustCompile("//img/@src")
+var ImagePattern = xmlpath.MustCompile("//img")
+var ClassPattern = xmlpath.MustCompile("@class")
+var SrcPattern = xmlpath.MustCompile("@src")
 
 var versionNotifyCID = "705809578872406117"
 
@@ -185,18 +187,18 @@ func parseFacebookPost(postLink string) ([]rune, io.Reader, error) {
 }
 
 func extractImage(node *xmlpath.Node) io.Reader {
-	i := 0
 	for iter := ImagePattern.Iter(node); iter.Next(); {
-		if i > 0 {
-			picUrl := iter.Node().String()
-			log.Println(picUrl)
-			resp, err := http.Get(picUrl)
-			if err != nil {
-				continue
-			}
-			return resp.Body
+		picClass, ok := ClassPattern.String(iter.Node())
+		if ok && strings.Contains(picClass, "profpic") {
+			continue
 		}
-		i++
+		picURL, _ := SrcPattern.String(iter.Node())
+		log.Println(picURL)
+		resp, err := http.Get(picURL)
+		if err != nil {
+			continue
+		}
+		return resp.Body
 	}
 	return nil
 }
