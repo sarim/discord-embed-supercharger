@@ -193,7 +193,7 @@ func extractImage(node *xmlpath.Node) io.Reader {
 			continue
 		}
 		picURL, _ := SrcPattern.String(iter.Node())
-		if !strings.HasPrefix(picURL, "https://scontent.") {
+		if !strings.HasPrefix(picURL, "https://scontent") {
 			continue
 		}
 		log.Println(picURL)
