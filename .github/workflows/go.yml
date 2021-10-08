@@ -58,7 +58,7 @@ jobs:
 
       - name: scp
         run: |
-          scp ./bin/discord-embed-supercharger-linux-amd64 ${{ secrets.DEPLOY_SERVER_USER }}@${{ secrets.DEPLOY_SERVER_HOST }}:
+          scp -p ./bin/discord-embed-supercharger-linux-amd64 ${{ secrets.DEPLOY_SERVER_USER }}@${{ secrets.DEPLOY_SERVER_HOST }}:
       
       - name: start process
         run: |
