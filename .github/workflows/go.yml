@@ -59,7 +59,11 @@ jobs:
       - name: scp
         run: |
           scp -p ./bin/discord-embed-supercharger-linux-amd64 ${{ secrets.DEPLOY_SERVER_USER }}@${{ secrets.DEPLOY_SERVER_HOST }}:
-      
+
+      - name: fix permission
+        run: |
+          ssh ${{ secrets.DEPLOY_SERVER_USER }}@${{ secrets.DEPLOY_SERVER_HOST }} chmod +x ./discord-embed-supercharger-linux-amd64
+
       - name: start process
         run: |
           ssh ${{ secrets.DEPLOY_SERVER_USER }}@${{ secrets.DEPLOY_SERVER_HOST }} systemctl --user start ${{ secrets.DEPLOY_SERVER_SERVICE }}
