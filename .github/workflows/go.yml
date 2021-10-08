@@ -51,10 +51,15 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           name: id_rsa # optional
           known_hosts: ${{ secrets.KNOWN_HOSTS }}
+
+      - name: stop process
+        run: |
+          ssh ${{ secrets.DEPLOY_SERVER_USER }}@${{ secrets.DEPLOY_SERVER_HOST }} systemctl --user stop ${{ secrets.DEPLOY_SERVER_SERVICE }}
+
       - name: scp
         run: |
-          scp ./bin/discord-embed-supercharger-linux-386 github@${{ secrets.DEPLOY_SERVER_HOST }}:
+          scp ./bin/discord-embed-supercharger-linux-amd64 ${{ secrets.DEPLOY_SERVER_USER }}@${{ secrets.DEPLOY_SERVER_HOST }}:
       
-      - name: restart process
+      - name: start process
         run: |
-          ssh github@${{ secrets.DEPLOY_SERVER_HOST }} ${{ secrets.DEPLOY_SERVER_SCRIPT }}
+          ssh ${{ secrets.DEPLOY_SERVER_USER }}@${{ secrets.DEPLOY_SERVER_HOST }} systemctl --user start ${{ secrets.DEPLOY_SERVER_SERVICE }}
