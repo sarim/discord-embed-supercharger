@@ -20,7 +20,7 @@ const Version = "v1.0.0"
 // Session is declared in the global space so it can be easily used
 // throughout this program.
 // In this use case, there is no error that would be returned.
-var Session, _ = discordgo.New()
+var Session, _ = discordgo.New(os.Getenv("DG_TOKEN"))
 
 // Read in all configuration options from both environment variables and
 // command line arguments.
@@ -29,7 +29,6 @@ func init() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
 	// Discord Authentication Token
-	Session.Token = os.Getenv("DG_TOKEN")
 	if Session.Token == "" {
 		flag.StringVar(&Session.Token, "t", "", "Discord Authentication Token")
 	}
@@ -79,6 +78,8 @@ func main() {
 		log.Println("You must provide a Discord authentication token.")
 		return
 	}
+
+	Session.Identify.Token = Session.Token
 
 	// Open a websocket connection to Discord
 	err = Session.Open()
