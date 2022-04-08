@@ -12,6 +12,8 @@ import (
 	"regexp"
 	"strings"
 
+	"net/url"
+
 	"github.com/bwmarrin/discordgo"
 	"gopkg.in/xmlpath.v2"
 )
@@ -105,9 +107,28 @@ func (m *Mux) OnMessageCreate(ds *discordgo.Session, mc *discordgo.MessageCreate
 	}
 
 	fbLinkRe := regexp.MustCompile(`(https:\/\/.*\.facebook\.com\/[^ ?]+)[?]?[^ ]*`)
+	whiteListedQueries := map[string]struct{}{
+		"v":                struct{}{},
+		"fbid":             struct{}{},
+		"set":              struct{}{},
+		"story_fbid":       struct{}{},
+		"id":               struct{}{},
+		"multi_permalinks": struct{}{},
+	}
 
 	if postLink := fbLinkRe.FindStringSubmatch(mc.Content); postLink != nil {
 		log.Println(mc.Content, c.ID, mc.Message.ID)
+
+		postLinkURL, _ := url.Parse(postLink[0])
+
+		queryParams := postLinkURL.Query()
+
+		for key, _ := range queryParams {
+			if _, contains := whiteListedQueries[key]; !contains {
+				queryParams.Del(key)
+			}
+		}
+		postLinkURL.RawQuery = queryParams.Encode()
 
 		quoteChar := ">"
 		AuthorName := mc.Member.Nick
@@ -126,7 +147,7 @@ func (m *Mux) OnMessageCreate(ds *discordgo.Session, mc *discordgo.MessageCreate
 			msg = msg[0:200]
 		}
 		msgRaw := string(msg)
-		msgRaw = "**" + AuthorName + "** Says: \n" + fbLinkRe.ReplaceAllString(mc.Content, "<"+postLink[1]+"> \n"+quoteChar+" "+msgRaw+"\n")
+		msgRaw = "**" + AuthorName + "** Says: \n" + fbLinkRe.ReplaceAllString(mc.Content, "<"+postLinkURL.String()+"> \n"+quoteChar+" "+msgRaw+"\n")
 
 		var file *discordgo.File = nil
 		if pic != nil {
